@@ -1,0 +1,29 @@
+# Python
+*.egg-info/
+*.egg
+build/
+dist/
+**/__pycache__/
+*.pyc
+
+# ChromaDB
+chroma_db/
+chroma_db_*/
+
+# Logs and outputs
+logs/
+*.log
+
+# Data files
+*.pkl
+*.cache
+
+# Results (所有中间结果)
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

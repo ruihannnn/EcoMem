@@ -1,0 +1,47 @@
+{
+  "oracle_k": {
+    "metrics": {
+      "precision": 0.3891941391941392,
+      "recall": 0.3891941391941392,
+      "f1": 0.3891941391941392,
+      "accuracy": 0.7622103386809269,
+      "tp": 425.0,
+      "fp": 667.0,
+      "fn": 667.0,
+      "tn": 3851.0
+    },
+    "window_diff": 0.35805991440798857
+  },
+  "delta_threshold": {
+    "best_f1_threshold": 1.044,
+    "metrics": {
+      "precision": 0.3055711873944851,
+      "recall": 0.49725274725274726,
+      "f1": 0.37852910421749736,
+      "accuracy": 0.682174688057041,
+      "tp": 543.0,
+      "fp": 1234.0,
+      "fn": 549.0,
+      "tn": 3284.0
+    }
+  },
+  "ratio_threshold": {
+    "best_f1_ratio": 0.42,
+    "metrics": {
+      "precision": 0.2967332123411978,
+      "recall": 0.5989010989010989,
+      "f1": 0.39684466019417475,
+      "accuracy": 0.645632798573975,
+      "tp": 654.0,
+      "fp": 1550.0,
+      "fn": 438.0,
+      "tn": 2968.0
+    }
+  },
+  "stats": {
+    "sessions_processed": 272,
+    "sessions_skipped": 0,
+    "total_gaps": 5610,
+    "total_boundaries": 1092
+  }
+}
