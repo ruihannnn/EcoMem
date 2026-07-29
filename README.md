@@ -2,9 +2,6 @@
   <img src="assets/remember.png" alt="EcoMem Logo" width="400"/>
   <h1>EcoMem</h1>
   <p><strong>面向长对话智能体的轻量级结构化记忆框架</strong></p>
-  <p>
-    <a href="https://arxiv.org/abs/2602.09712">[论文]</a>
-  </p>
 </div>
 
 ## 概述
