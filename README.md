@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="assets/remember.png" alt="LessMem Logo" width="400"/>
-  <h1>LessMem</h1>
+  <img src="assets/remember.png" alt="EcoMem Logo" width="400"/>
+  <h1>EcoMem</h1>
   <p><strong>面向长对话智能体的轻量级结构化记忆框架</strong></p>
   <p>
     <a href="https://arxiv.org/abs/2602.09712">[论文]</a>
@@ -9,17 +9,15 @@
 
 ## 概述
 
-`LessMem` 的核心目标不是把整段历史对话直接塞回模型，而是把长对话先压缩、再结构化、最后按问题自适应召回。基于源码实现，系统主链路为：**预压缩** -> **MinCut 主题切分** -> **结构化记忆抽取与索引** -> **自适应召回问答** -> **自动评估**。
+`EcoMem` 的核心目标不是把整段历史对话直接塞回模型，而是把长对话先压缩、再结构化、最后按问题自适应召回。基于源码实现，系统主链路为：**预压缩** -> **MinCut 主题切分** -> **结构化记忆抽取与索引** -> **自适应召回问答** -> **自动评估**。
 
 这一路径对应 `run_pipeline.sh` 中的 Step 1-6，其中真正构成方法主体的是前三个阶段：压缩、结构化索引、自适应召回。
 
-<img src="assets/framework.png" alt="LessMem 系统架构" width="100%">
-
 ## 方法介绍
 
-### LessMem 架构
+### EcoMem 架构
 
-LessMem 可以概括为一个三段式记忆流水线。第一段通过预压缩和基于图切分的主题划分，把原始长对话整理成更紧凑、语义更集中的片段；第二段把每个片段进一步转成两种可检索的记忆形态，即保留叙事上下文的情景记忆与可独立检索的语义记忆；第三段在回答问题时不固定检索深度，而是先判断问题类型，再动态调节两类记忆的召回范围，从而在准确率与上下文成本之间取得平衡。
+EcoMem 可以概括为一个三段式记忆流水线。第一段通过预压缩和基于图切分的主题划分，把原始长对话整理成更紧凑、语义更集中的片段；第二段把每个片段进一步转成两种可检索的记忆形态，即保留叙事上下文的情景记忆与可独立检索的语义记忆；第三段在回答问题时不固定检索深度，而是先判断问题类型，再动态调节两类记忆的召回范围，从而在准确率与上下文成本之间取得平衡。
 
 ### 模块 1：压缩模块（预压缩 + MinCut）
 
@@ -33,28 +31,28 @@ LessMem 可以概括为一个三段式记忆流水线。第一段通过预压缩
 
 ### 模块 2：结构化索引（提取语义记忆和情景记忆）
 
-这一模块对应 `scripts/step3_build_memory.py` 以及 `scripts/lessmem/` 下的 `memory.py`、`theme_extractor.py`、`chroma.py`、`data_utils.py`、`prompts.py`。它的核心作用是把主题级对话片段转成两套互补的记忆表示。
+这一模块对应 `scripts/step3_build_memory.py` 以及 `scripts/EcoMem/` 下的 `memory.py`、`theme_extractor.py`、`chroma.py`、`data_utils.py`、`prompts.py`。它的核心作用是把主题级对话片段转成两套互补的记忆表示。
 
-首先，`LessMem.extract_all_from_themes()` 会把多个主题按 batch 送入 `ThemeExtractor.extract_memories_batch()`。在 prompt 设计上，模型需要同时输出两部分结果：
+首先，`EcoMem.extract_all_from_themes()` 会把多个主题按 batch 送入 `ThemeExtractor.extract_memories_batch()`。在 prompt 设计上，模型需要同时输出两部分结果：
 
 - `episodic_summary`：以 `As of [timestamp]` 开头的主题级叙事摘要，保留谁在什么时间说了什么、发生了什么、涉及哪些活动、地点与情绪。
 - `semantic_memories`：拆分成多条自包含的原子事实，每条都尽量写成显式主语、显式时间、显式事件的独立句子。
 
 源码里还对抽取结果施加了两类关键约束。第一类是时间消歧：prompt 要求把 `yesterday`、`last year`、`two months ago` 等相对时间转换为绝对日期，随后 `normalize_timestamp()` 再把主题时间戳统一规范到 ISO 格式。第二类是指代消歧：prompt 明确要求把 `he`、`she`、`they` 等代词替换成真实姓名，从而提升后续检索时的可匹配性。
 
-在索引阶段，`LessMem.store_records_to_chroma()` 会把上述两类结果分别写入 Chroma。具体来说，情景记忆通过 `add_episode()` 写入 `*_episodes` collection，语义记忆通过 `add_semantic_memory()` 写入 `*_semantic` collection；二者共享同一个 `user_id = speaker_a_speaker_b`，但以不同集合分别管理。这样做的好处是，系统既能保留主题级叙事上下文，又能保留更细粒度、可跨主题复用的原子事实。
+在索引阶段，`EcoMem.store_records_to_chroma()` 会把上述两类结果分别写入 Chroma。具体来说，情景记忆通过 `add_episode()` 写入 `*_episodes` collection，语义记忆通过 `add_semantic_memory()` 写入 `*_semantic` collection；二者共享同一个 `user_id = speaker_a_speaker_b`，但以不同集合分别管理。这样做的好处是，系统既能保留主题级叙事上下文，又能保留更细粒度、可跨主题复用的原子事实。
 
 换言之，模块 2 的重点不是“把摘要存起来”，而是把原始长对话重写成一套双通道、可向量检索、带时间锚点的结构化记忆索引。
 
 ### 模块 3：自适应召回
 
-这一模块对应 `scripts/step4_answer.py`、`scripts/lessmem/vector_search.py` 与 `scripts/lessmem/chroma.py`。它回答的问题是：面对不同类型的问题，系统应该召回多少情景记忆、多少语义记忆，才能既避免无关上下文，又保留足够的推理证据。
+这一模块对应 `scripts/step4_answer.py`、`scripts/EcoMem/vector_search.py` 与 `scripts/EcoMem/chroma.py`。它回答的问题是：面对不同类型的问题，系统应该召回多少情景记忆、多少语义记忆，才能既避免无关上下文，又保留足够的推理证据。
 
 默认情况下，系统会先根据问题在情景记忆库中检索 `ep_k` 条 episode；如果开启 `--use-semantic`，则额外在语义记忆库中检索 `sem_k` 条 semantic memory。真正的自适应能力来自 `VectorSearch._route()`：当 `--adaptive` 打开后，系统会先用 `ROUTER_PROMPT` 对问题进行轻量分类，将其划分为 `multi_hop`、`temporal` 或 `simple` 三类，再自动给出对应的 `ep_k` 与 `sem_k`。
 
 从源码中的路由规则可以看到，这种调节具有明确偏向：`multi_hop` 问题通常需要更高的 `sem_k` 来聚合跨主题事实，`temporal` 问题则会提升 `ep_k` 以保留更多时间线上下文，`simple` 问题使用较小的默认召回范围即可。随后系统把召回到的 `Episodes` 与 `Semantic Memories` 拼接成回答提示词，再调用生成模型输出最终答案。
 
-因此，LessMem 的召回并不是单一路径的向量搜索，而是一个“先判题型、再调召回、再组织上下文”的查询感知式检索过程。
+因此，EcoMem 的召回并不是单一路径的向量搜索，而是一个“先判题型、再调召回、再组织上下文”的查询感知式检索过程。
 
 ### 三个模块如何衔接
 
@@ -64,7 +62,7 @@ LessMem 可以概括为一个三段式记忆流水线。第一段通过预压缩
 2. 结构化索引把 `themes` 变成两套长期可复用的记忆库。
 3. 自适应召回再根据问题特征，从两套记忆库中动态取回最合适的证据。
 
-这也是 LessMem 区别于“全量拼接上下文”方案的核心：它不依赖单次超长上下文窗口，而是通过压缩、显式结构化与查询感知检索，把长期记忆变成一个可维护、可扩展、可控成本的系统过程。
+这也是 EcoMem 区别于“全量拼接上下文”方案的核心：它不依赖单次超长上下文窗口，而是通过压缩、显式结构化与查询感知检索，把长期记忆变成一个可维护、可扩展、可控成本的系统过程。
 
 ## 流水线概览
 
@@ -80,9 +78,9 @@ LessMem 可以概括为一个三段式记忆流水线。第一段通过预压缩
 ## 项目结构
 
 ```text
-LessMem/
+EcoMem/
 ├── scripts/
-│   ├── lessmem/
+│   ├── EcoMem/
 │   │   ├── memory.py
 │   │   ├── config.py
 │   │   ├── client.py
@@ -109,11 +107,11 @@ LessMem/
 ## 安装
 
 ```bash
-conda create -n lessmem python=3.10
-conda activate lessmem
+conda create -n EcoMem python=3.10
+conda activate EcoMem
 
-git clone https://github.com/YimingShu-teay/LessMem.git
-cd LessMem
+git clone https://github.com/YimingShu-teay/EcoMem.git
+cd EcoMem
 
 pip install -e .
 ```
@@ -187,38 +185,38 @@ results/<tag>/
 # Step 1: 预压缩
 python scripts/step1_compress.py \
     --input dataset/locomo10.json \
-    --output results/LessMem/step1_compress/compressed.json \
+    --output results/EcoMem/step1_compress/compressed.json \
     --rate 0.7
 
 # Step 2: MinCut 主题切分
 python scripts/step2_segment.py \
-    --data results/LessMem/step1_compress/compressed.json \
-    --output results/LessMem/step2_segment/themes.json \
+    --data results/EcoMem/step1_compress/compressed.json \
+    --output results/EcoMem/step2_segment/themes.json \
     --mode mincut \
     --delta 1.01
 
 # Step 3: 结构化记忆抽取 + 入库
-export CHROMA_PERSIST_DIR=results/LessMem/step3_build_memory/chroma_db
+export CHROMA_PERSIST_DIR=results/EcoMem/step3_build_memory/chroma_db
 python scripts/step3_build_memory.py \
-    --themes results/LessMem/step2_segment/themes.json \
+    --themes results/EcoMem/step2_segment/themes.json \
     --max-workers 2000 \
     --topics-per-batch 10 \
-    --raw-json results/LessMem/step3_build_memory/raw_memories.json \
+    --raw-json results/EcoMem/step3_build_memory/raw_memories.json \
     --stage extract
 
 python scripts/step3_build_memory.py \
-    --themes results/LessMem/step2_segment/themes.json \
+    --themes results/EcoMem/step2_segment/themes.json \
     --max-workers 2000 \
-    --raw-json results/LessMem/step3_build_memory/raw_memories.json \
+    --raw-json results/EcoMem/step3_build_memory/raw_memories.json \
     --stage store
 
 # Step 4: 语义记忆 + 自适应召回
 python scripts/step4_answer.py \
-    --data results/LessMem/step1_compress/compressed.json \
-    --output results/LessMem/step4_answer/answers.json \
+    --data results/EcoMem/step1_compress/compressed.json \
+    --output results/EcoMem/step4_answer/answers.json \
     --use-semantic \
     --adaptive \
-    --chroma-db results/LessMem/step3_build_memory/chroma_db
+    --chroma-db results/EcoMem/step3_build_memory/chroma_db
 ```
 
 ## 关键配置
